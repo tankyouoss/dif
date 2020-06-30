@@ -21,8 +21,12 @@ function build() {
 }
 
 function package() {
-  cd build/dif-${VERSION-latest}-osx64 && zip -r ../dif-${VERSION-latest}-osx64.zip dif && cd ../../
-	cd build/dif-${VERSION-latest}-linux64 && zip -r ../dif-${VERSION-latest}-linux64.zip dif && cd ../../
+  cd build
+  tar cvfz dif-${VERSION-latest}-osx64.tgz dif-${VERSION-latest}-osx64/dif
+  tar cvfz dif-${VERSION-latest}-linux64.tgz dif-${VERSION-latest}-linux64/dif
+  #cd build/dif-${VERSION-latest}-osx64 && zip -r ../dif-${VERSION-latest}-osx64.zip dif && cd ../../
+	#cd build/dif-${VERSION-latest}-linux64 && zip -r ../dif-${VERSION-latest}-linux64.zip dif && cd ../../
+	cd ../
 }
 
 function run() {
