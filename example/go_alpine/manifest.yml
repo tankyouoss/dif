@@ -1,0 +1,7 @@
+registry: eu.gcr.io
+name: tankyou-oss/go
+tag: 1.14.4-alpine
+additionalTags:
+  - latest
+  - 1.14-alpine
+  - 1-alpine

@@ -1,0 +1,7 @@
+registry: eu.gcr.io
+name: tankyou-oss/alpine
+tag: 3.12.0
+additionalTags:
+  - latest
+  - 3.12
+  - 3
