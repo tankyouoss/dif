@@ -1,6 +1,7 @@
 package factory
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -17,7 +18,12 @@ type RegistryCredentials struct {
 	Secret string
 }
 
+type DockerConfigAuth struct {
+	Auth string `json:"auth"`
+}
+
 type DockerConfig struct {
+	Credentials map[string]*DockerConfigAuth `json:"auths"`
 	DefaultCredHelper   string `json:"credsStore"`
 	CredHelpers map[string]string `json:"credHelpers"`
 }
@@ -54,22 +60,25 @@ func parseBearer(bearer []string) map[string]string {
 	return out
 }
 
-func getCredentialHelper(registry string) (string, error) {
+func readDockerConfig() (*DockerConfig, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return "", fmt.Errorf("coudn't get docker creds helper name\n%w", err)
+		return nil, fmt.Errorf("coudn't get docker creds helper name\n%w", err)
 	}
 
 	file, err := os.Open(path.Join(home, ".docker/config.json"))
 	if err != nil {
-		return "", fmt.Errorf("coudn't get docker creds helper name\n%w", err)
+		return nil, fmt.Errorf("coudn't get docker creds helper name\n%w", err)
 	}
 	defer file.Close()
 
 	byteValue, _ := ioutil.ReadAll(file)
 	var dockerConfig DockerConfig
 	json.Unmarshal(byteValue, &dockerConfig)
+	return &dockerConfig, nil
+}
 
+func getCredentialHelper(dockerConfig *DockerConfig, registry string) (string, error) {
 	helper := dockerConfig.DefaultCredHelper
 	if value, ok := dockerConfig.CredHelpers[registry]; ok {
 		helper = value
@@ -79,35 +88,53 @@ func getCredentialHelper(registry string) (string, error) {
 }
 
 func GetRegistryCredentials(registry string) (*RegistryCredentials, error) {
+	dockerConfig, err := readDockerConfig()
+	if err != nil {
+		return nil, fmt.Errorf("coudn't read docker config file\n%w", err)
+	}
 	credentials := RegistryCredentials{}
 
-	credHelper, err := getCredentialHelper(registry)
-	if err != nil {
-		return nil, fmt.Errorf("coudn't get docker registry %s credentials\n%w", registry, err)
-	}
+	if dockerConfigCreds, ok := dockerConfig.Credentials[registry]; ok && dockerConfigCreds != nil && len(dockerConfigCreds.Auth) > 0 {
+		decodedCred, err := base64.StdEncoding.DecodeString(dockerConfigCreds.Auth)
+		if err != nil {
+			return nil, fmt.Errorf("coudn't read docker config credentials\n%w", err)
+		}
+		credComponents := strings.Split(string(decodedCred), ":")
+		if len(credComponents) != 2 {
+			return nil, fmt.Errorf("coudn't read docker config credentials. Missing username or password component for basic auth.\n")
+		}
+		credentials.Username = credComponents[0]
+		credentials.Secret = credComponents[1]
+		credentials.ServerURL = registry
+	} else {
+		credHelper, err := getCredentialHelper(dockerConfig, registry)
+		if err != nil {
+			return nil, fmt.Errorf("coudn't get docker registry %s credentials\n%w", registry, err)
+		}
 
-	execPath, err := exec.LookPath(credHelper)
-	if err != nil {
-		return nil, fmt.Errorf("coudn't get docker registry %s credentials\n%w", registry, err)
-	}
+		execPath, err := exec.LookPath(credHelper)
+		if err != nil {
+			return nil, fmt.Errorf("coudn't get docker registry %s credentials\n%w", registry, err)
+		}
 
-	input := strings.NewReader(registry)
-	cmd := &exec.Cmd {
-		Path: execPath,
-		Args: []string{ execPath, "get" },
-		Stdin: input,
-		//Stdout: os.Stdout,
-		//Stderr: os.Stderr,
-	}
+		input := strings.NewReader(registry)
+		cmd := &exec.Cmd {
+			Path: execPath,
+			Args: []string{ execPath, "get" },
+			Stdin: input,
+			//Stdout: os.Stdout,
+			//Stderr: os.Stderr,
+		}
 
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return nil, fmt.Errorf("error running docker credentials helper.\n%w\n%s", err, output)
-	}
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			return nil, fmt.Errorf("error running docker credentials helper.\n%w\n%s", err, output)
+		}
 
-	err = json.Unmarshal(output, &credentials)
-	if err != nil {
-		return nil, err
+		err = json.Unmarshal(output, &credentials)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &credentials, nil
