@@ -13,6 +13,8 @@ It also checks that the version in the manifest file has been updated to ensure 
 Each folder in the git repository need to be a docker image and should contain a manifest and dockerfile.
 Example of manifest and folder architecture can be found in example folder.
 
+Each build image has a label ``GitCommit`` with the repository current git commit sha1
+
 ## Build
 To try ot build images and check version, run :
 ```
@@ -25,7 +27,7 @@ For example : ``run run build --rp example 8750b695e9a9335211b491fad39cdeaf0d837
 To push images run :
 To try ot build images and check version, run :
 ```
-run run push --rp GIT_REPO_PATH PREVIOUS_COMMIT_SHA1 [CURRENT_COMMIT_SHA1]
+dif push --rp GIT_REPO_PATH PREVIOUS_COMMIT_SHA1 [CURRENT_COMMIT_SHA1]
 ```
 
 For example : ``dif push --rp example 8750b695e9a9335211b491fad39cdeaf0d837843``

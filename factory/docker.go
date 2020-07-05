@@ -6,23 +6,24 @@ import (
 	"os/exec"
 )
 
-func Build(folderPath string, manifest Manifest, output io.Writer) (string, error) {
+func Build(folderPath string, manifest Manifest, gitSha1 string, output io.Writer) (string, error) {
 	execPath, err := exec.LookPath("docker")
 	if err != nil {
 		return "", err
 	}
 
 	imageName :=  ImageName(manifest)
+	labels := fmt.Sprintf("GitCommit=%s", gitSha1)
 	cmd := &exec.Cmd {
 		Path: execPath,
-		Args: []string{ execPath, "build", "-t", imageName, folderPath},
+		Args: []string{ execPath, "build", "-t", imageName, "--label", labels, folderPath},
 		Stdout: output,
 		Stderr: output,
 	}
 
 	if err := cmd.Run() ; err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
-			return "", fmt.Errorf("coudn't build image %s. Exited with code %d", imageName, exitError.ExitCode())
+			return "", fmt.Errorf("couldn't build image %s. Exited with code %d", imageName, exitError.ExitCode())
 		}
 	}
 

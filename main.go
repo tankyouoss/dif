@@ -24,6 +24,12 @@ func build(repoPath string, previousSha1 string, currentSha1 string) {
 		os.Exit(1)
 	}
 
+	realCurrentSha1, err := factory.GitGetCurrentSha1(repoPath)
+	if err != nil {
+		fmt.Println(Sprintf(Red("%s%v"), failed, err))
+		os.Exit(1)
+	}
+
 	fmt.Println(Yellow("Found changes for"))
 	for _, folder := range folders {
 		fmt.Println(Sprintf(Yellow("  - %s"), folder))
@@ -56,7 +62,7 @@ func build(repoPath string, previousSha1 string, currentSha1 string) {
 		fmt.Println(Yellow("    Building image"))
 
 		folderPath := path.Join(repoPath, folder)
-		imageName, err = factory.Build(folderPath, manifest, os.Stdout)
+		imageName, err = factory.Build(folderPath, manifest, realCurrentSha1, os.Stdout)
 		if err != nil {
 			fmt.Println(Sprintf(Red("%s%v"), failed, err))
 			os.Exit(1)
@@ -70,6 +76,12 @@ func push(repoPath string, previousSha1 string, currentSha1 string) {
 	// Get diff
 	fmt.Println(Yellow("Checking for images to push\n"))
 	folders, err := factory.GitChangedFolders(repoPath, currentSha1, previousSha1)
+	if err != nil {
+		fmt.Println(Sprintf(Red("%s%v"), failed, err))
+		os.Exit(1)
+	}
+
+	realCurrentSha1, err := factory.GitGetCurrentSha1(repoPath)
 	if err != nil {
 		fmt.Println(Sprintf(Red("%s%v"), failed, err))
 		os.Exit(1)
@@ -94,7 +106,7 @@ func push(repoPath string, previousSha1 string, currentSha1 string) {
 		fmt.Println(Yellow("    Building image"))
 
 		folderPath := path.Join(repoPath, folder)
-		imageName, err = factory.Build(folderPath, manifest, os.Stdout)
+		imageName, err = factory.Build(folderPath, manifest, realCurrentSha1, os.Stdout)
 		if err != nil {
 			fmt.Println(Sprintf(Red("%s%v"), failed, err))
 			os.Exit(1)

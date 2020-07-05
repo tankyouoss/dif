@@ -78,6 +78,21 @@ func GitChangedFolders(repoPath string, currentSha string, previousSha string) (
 	return uniqFolders, nil
 }
 
+func GitGetCurrentSha1(repoPath string) (string, error){
+	r, err := git.PlainOpen(repoPath)
+	if err != nil {
+		return "", fmt.Errorf("invalid repository %s: %w", repoPath, err)
+	}
+
+	headRef, err := r.Head()
+	if err != nil {
+		return "", fmt.Errorf("head reference not found: %w", err)
+	}
+	currentSha := headRef.Hash().String()
+
+	return currentSha, nil
+}
+
 func ReadManifest(repoPath string, directory string) (Manifest, error) {
 	var manifest Manifest
 
